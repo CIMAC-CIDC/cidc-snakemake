@@ -1160,7 +1160,10 @@ class KubernetesExecutor(ClusterExecutor):
         container.volume_mounts = [kubernetes.client.V1VolumeMount(
             name="source", mount_path="/source")]
 
-        body.spec = kubernetes.client.V1PodSpec(containers=[container])
+        toleration = kubernetes.client.V1Toleration(effect="NoSchedule", key="snakemake",
+            operator="Equal", value="issnake")
+
+        body.spec = kubernetes.client.V1PodSpec(containers=[container], tolerations=[toleration])
         # fail on first error
         body.spec.restart_policy = "Never"
 
