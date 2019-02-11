@@ -1197,6 +1197,8 @@ class KubernetesExecutor(ClusterExecutor):
         cluster_config=None,
         local_input=None,
         restart_times=None,
+        kubernetes_resource_requests=None,
+        kubernetes_tolerations=None
     ):
 
         exec_job = (
@@ -1225,6 +1227,8 @@ class KubernetesExecutor(ClusterExecutor):
             exec_job=exec_job,
             assume_shared_fs=False,
             max_status_checks_per_second=10,
+            kubernetes_resource_requests=kubernetes_resource_requests,
+            kubernetes_tolerations=kubernetes_resource_requests
         )
         # use relative path to Snakefile
         self.snakefile = os.path.relpath(workflow.snakefile)
@@ -1249,6 +1253,8 @@ class KubernetesExecutor(ClusterExecutor):
         self.secret_envvars = {}
         self.register_secret()
         self.container_image = container_image or get_container_image()
+        self.kubernetes_resource_requests = kubernetes_resource_requests,
+        self.kubernetes_tolerations = kubernetes_resource_requests
 
     def register_secret(self):
         import kubernetes.client
@@ -1333,12 +1339,18 @@ class KubernetesExecutor(ClusterExecutor):
             kubernetes.client.V1VolumeMount(name="source", mount_path="/source")
         ]
 
-        toleration = kubernetes.client.V1Toleration(
-            effect="NoSchedule", key="snakemake", operator="Equal", value="issnake"
-        )
+        tolerations = []
+        if self.kubernetes_tolerations:
+            for tolerance in self.kubernetes_tolerations:
+                tolerations.append(kubernetes.client.V1Toleration(
+                    effect=tolerance["effect"],
+                    key=tolerance["key"],
+                    operator=tolerance["operator"],
+                    value=tolerance["value"]
+                ))
 
         body.spec = kubernetes.client.V1PodSpec(
-            containers=[container], tolerations=[toleration]
+            containers=[container], tolerations=tolerations
         )
         # fail on first error
         body.spec.restart_policy = "Never"
@@ -1389,12 +1401,15 @@ class KubernetesExecutor(ClusterExecutor):
         # maintenance, but won't use a full core for that.
         # This way, we should be able to saturate the node without exceeding it
         # too much.
-        print(job.resources["_cores"], "HONK: CLUSTER CORES")
-        container.resources.requests["cpu"] = job.resources["_cores"] - 1
-        if "mem_mb" in job.resources.keys():
-            container.resources.requests["memory"] = "{}M".format(
-                job.resources["mem_mb"]
-            )
+        if not self.kubernetes_resource_requests:
+            container.resources.requests["cpu"] = job.resources["_cores"] - 1
+            if "mem_mb" in job.resources.keys():
+                container.resources.requests["memory"] = "{}M".format(
+                    job.resources["mem_mb"]
+                )
+        else:
+            container.resources.requests["cpu"] = self.kubernetes_resource_requests["cpu"]
+            container.resources.requests["memory"] = "{}M".format(self.kubernetes_resource_requests["memory"])
 
         # capabilities
         if job.needs_singularity and self.workflow.use_singularity:

@@ -62,7 +62,9 @@ class JobScheduler:
                  latency_wait=3,
                  greediness=1.0,
                  force_use_threads=False,
-                 assume_shared_fs=True):
+                 assume_shared_fs=True,
+                 kubernetes_resource_requests=None,
+                 kubernetes_tolerations=None):
         """ Create a new instance of KnapsackJobScheduler. """
         from ratelimiter import RateLimiter
 
@@ -175,7 +177,9 @@ class JobScheduler:
                 quiet=quiet,
                 printshellcmds=printshellcmds,
                 latency_wait=latency_wait,
-                cluster_config=cluster_config)
+                cluster_config=cluster_config,
+                kubernetes_resource_requests=kubernetes_resource_requests,
+                kubernetes_tolerations=kubernetes_tolerations)
         else:
             self._executor = CPUExecutor(workflow, dag, cores,
                                          printreason=printreason,
