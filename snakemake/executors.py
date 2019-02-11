@@ -1226,9 +1226,7 @@ class KubernetesExecutor(ClusterExecutor):
             restart_times=restart_times,
             exec_job=exec_job,
             assume_shared_fs=False,
-            max_status_checks_per_second=10,
-            kubernetes_resource_requests=kubernetes_resource_requests,
-            kubernetes_tolerations=kubernetes_resource_requests
+            max_status_checks_per_second=10
         )
         # use relative path to Snakefile
         self.snakefile = os.path.relpath(workflow.snakefile)
