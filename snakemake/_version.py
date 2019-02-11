@@ -208,7 +208,7 @@ def git_versions_from_keywords(keywords, tag_prefix, verbose):
     # no suitable tags, so version is "0+unknown", but full hex is still there
     if verbose:
         print("no suitable tags, using unknown + full revision id")
-    return {"version": "0+unknown",
+    return {"version": "5.3.1",
             "full-revisionid": keywords["full"].strip(),
             "dirty": False, "error": "no suitable tags", "date": None}
 
@@ -498,7 +498,7 @@ def get_versions():
         for i in cfg.versionfile_source.split('/'):
             root = os.path.dirname(root)
     except NameError:
-        return {"version": "0+unknown", "full-revisionid": None,
+        return {"version": "5.3.1", "full-revisionid": None,
                 "dirty": None,
                 "error": "unable to find root of source tree",
                 "date": None}
@@ -515,6 +515,6 @@ def get_versions():
     except NotThisMethod:
         pass
 
-    return {"version": "0+unknown", "full-revisionid": None,
+    return {"version": "5.3.1", "full-revisionid": None,
             "dirty": None,
             "error": "unable to compute version", "date": None}
