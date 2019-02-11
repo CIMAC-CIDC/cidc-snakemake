@@ -1389,6 +1389,7 @@ class KubernetesExecutor(ClusterExecutor):
         # maintenance, but won't use a full core for that.
         # This way, we should be able to saturate the node without exceeding it
         # too much.
+        print(job.resources["_cores"], "HONK: CLUSTER CORES")
         container.resources.requests["cpu"] = job.resources["_cores"] - 1
         if "mem_mb" in job.resources.keys():
             container.resources.requests["memory"] = "{}M".format(
