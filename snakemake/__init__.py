@@ -228,7 +228,7 @@ def snakemake(snakefile,
         export_cwl (str):           Compile workflow to CWL and save to given file
         log_handler (function):     redirect snakemake output to this custom log handler, a function that takes a log message dictionary (see below) as its only argument (default None). The log message dictionary for the log handler has to following entries:
         kubernetes_resource_requests (dict): Dictionary specifying resource requests for the kubernetes runs.
-        kubernetes-tolerations (dict): Defines toleration to be applied to the kubernetes job.
+        kubernetes_tolerations (dict): Defines toleration to be applied to the kubernetes job.
             :level:
                 the log level ("info", "error", "debug", "progress", "job_info")
 
@@ -477,7 +477,9 @@ def snakemake(snakefile,
                                        assume_shared_fs=assume_shared_fs,
                                        cluster_status=cluster_status,
                                        max_jobs_per_second=max_jobs_per_second,
-                                       max_status_checks_per_second=max_status_checks_per_second)
+                                       max_status_checks_per_second=max_status_checks_per_second,
+                                       kubernetes_resource_requests=kubernetes_resource_requests,
+                                       kubernetes_tolerations=kubernetes_tolerations)
 
                 success = workflow.execute(
                     targets=targets,
