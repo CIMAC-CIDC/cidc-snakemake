@@ -549,7 +549,9 @@ def snakemake(snakefile,
                     assume_shared_fs=assume_shared_fs,
                     cluster_status=cluster_status,
                     report=report,
-                    export_cwl=export_cwl)
+                    export_cwl=export_cwl,
+                    kubernetes_resource_requests=kubernetes_resource_requests,
+                    kubernetes_tolerations=kubernetes_tolerations)
 
     except BrokenPipeError:
         # ignore this exception and stop. It occurs if snakemake output is piped into less and less quits before reading the whole output.

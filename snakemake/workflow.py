@@ -320,6 +320,7 @@ class Workflow:
                 kubernetes_resource_requests=None,
                 kubernetes_tolerations=None):
 
+        print("hoooonk workflow.py", kubernetes_resource_requests, kubernetes_tolerations)
         self.check_localrules()
 
         self.global_resources = dict() if resources is None else resources
