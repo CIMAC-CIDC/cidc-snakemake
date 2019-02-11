@@ -1339,6 +1339,7 @@ class KubernetesExecutor(ClusterExecutor):
 
         tolerations = []
         if self.kubernetes_tolerations:
+            print("hoooooonk: tolerations", str(self.kubernetes_tolerations))
             for tolerance in self.kubernetes_tolerations:
                 tolerations.append(kubernetes.client.V1Toleration(
                     effect=tolerance["effect"],
@@ -1350,6 +1351,7 @@ class KubernetesExecutor(ClusterExecutor):
         body.spec = kubernetes.client.V1PodSpec(
             containers=[container], tolerations=tolerations
         )
+        print("HONKHONK body.spec:", str(body.spec))
         # fail on first error
         body.spec.restart_policy = "Never"
 
@@ -1406,8 +1408,9 @@ class KubernetesExecutor(ClusterExecutor):
                     job.resources["mem_mb"]
                 )
         else:
-            container.resources.requests["cpu"] = self.kubernetes_resource_requests["cpu"]
-            container.resources.requests["memory"] = "{}M".format(self.kubernetes_resource_requests["memory"])
+            print("HOOOONK, kube-resource-request", str(self.kubernetes_resource_requests))
+            container.resources.requests["cpu"] = self.kubernetes_resource_requests[0]["cpu"]
+            container.resources.requests["memory"] = "{}M".format(self.kubernetes_resource_requests[0]["memory"])
 
         # capabilities
         if job.needs_singularity and self.workflow.use_singularity:
