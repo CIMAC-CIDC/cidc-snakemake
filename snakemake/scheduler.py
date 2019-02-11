@@ -170,6 +170,7 @@ class JobScheduler:
                 latency_wait=latency_wait,
                 cores=local_cores)
 
+            print("scheduler HONK!: ", str(kubernetes_resource_requests), str(kubernetes_tolerations))
             self._executor = KubernetesExecutor(
                 workflow, dag, kubernetes, kubernetes_envvars,
                 container_image=container_image,

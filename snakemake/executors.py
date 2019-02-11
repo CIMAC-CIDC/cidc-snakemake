@@ -439,6 +439,8 @@ class ClusterExecutor(RealExecutor):
         exec_job=None,
         assume_shared_fs=True,
         max_status_checks_per_second=1,
+        kubernetes_resource_requests=None,
+        kubernetes_tolerations=None
     ):
         from ratelimiter import RateLimiter
 
@@ -1241,7 +1243,7 @@ class KubernetesExecutor(ClusterExecutor):
         config.load_kube_config()
 
         import kubernetes.client
-
+        print("HONK!!!! Values as args: ", str(kubernetes_resource_requests), str(kubernetes_tolerations))
         self.kubeapi = kubernetes.client.CoreV1Api()
         self.batchapi = kubernetes.client.BatchV1Api()
         self.namespace = namespace
@@ -1252,7 +1254,7 @@ class KubernetesExecutor(ClusterExecutor):
         self.register_secret()
         self.container_image = container_image or get_container_image()
         self.kubernetes_resource_requests = kubernetes_resource_requests,
-        self.kubernetes_tolerations = kubernetes_resource_requests
+        self.kubernetes_tolerations = kubernetes_tolerations
 
     def register_secret(self):
         import kubernetes.client
