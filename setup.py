@@ -6,7 +6,6 @@ __email__ = "koester@jimmy.harvard.edu"
 __license__ = "MIT"
 
 import sys
-import versioneer
 
 
 if sys.version_info < (3, 5):
@@ -25,7 +24,6 @@ except ImportError:
 setup(
     name='snakemake',
     version='v5.3.1',
-    cmdclass=versioneer.get_cmdclass(),
     author='Johannes Köster',
     author_email='johannes.koester@tu-dortmund.de',
     description=
