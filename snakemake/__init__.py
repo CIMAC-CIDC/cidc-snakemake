@@ -477,9 +477,7 @@ def snakemake(snakefile,
                                        assume_shared_fs=assume_shared_fs,
                                        cluster_status=cluster_status,
                                        max_jobs_per_second=max_jobs_per_second,
-                                       max_status_checks_per_second=max_status_checks_per_second,
-                                       kubernetes_resource_requests=kubernetes_resource_requests,
-                                       kubernetes_tolerations=kubernetes_tolerations)
+                                       max_status_checks_per_second=max_status_checks_per_second)
 
                 success = workflow.execute(
                     targets=targets,

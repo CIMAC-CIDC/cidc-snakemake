@@ -1243,7 +1243,6 @@ class KubernetesExecutor(ClusterExecutor):
         config.load_kube_config()
 
         import kubernetes.client
-        print("HONK!!!! Values as args: ", str(kubernetes_resource_requests), str(kubernetes_tolerations))
         self.kubeapi = kubernetes.client.CoreV1Api()
         self.batchapi = kubernetes.client.BatchV1Api()
         self.namespace = namespace
@@ -1341,7 +1340,6 @@ class KubernetesExecutor(ClusterExecutor):
 
         tolerations = []
         if self.kubernetes_tolerations:
-            print("hoooooonk: tolerations", str(self.kubernetes_tolerations))
             for tolerance in self.kubernetes_tolerations:
                 tolerations.append(kubernetes.client.V1Toleration(
                     effect=tolerance["effect"],
@@ -1353,7 +1351,6 @@ class KubernetesExecutor(ClusterExecutor):
         body.spec = kubernetes.client.V1PodSpec(
             containers=[container], tolerations=tolerations
         )
-        print("HONKHONK body.spec:", str(body.spec))
         # fail on first error
         body.spec.restart_policy = "Never"
 
@@ -1410,7 +1407,6 @@ class KubernetesExecutor(ClusterExecutor):
                     job.resources["mem_mb"]
                 )
         else:
-            print("HOOOONK, kube-resource-request", str(self.kubernetes_resource_requests))
             container.resources.requests["cpu"] = self.kubernetes_resource_requests[0]["cpu"]
             container.resources.requests["memory"] = "{}M".format(self.kubernetes_resource_requests[0]["memory"])
 
