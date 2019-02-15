@@ -439,8 +439,6 @@ class ClusterExecutor(RealExecutor):
         exec_job=None,
         assume_shared_fs=True,
         max_status_checks_per_second=1,
-        kubernetes_resource_requests=None,
-        kubernetes_tolerations=None
     ):
         from ratelimiter import RateLimiter
 
@@ -1480,7 +1478,7 @@ class KubernetesExecutor(ClusterExecutor):
                     return func()
                 except:
                     # Still can't reach the server after 5 minutes
-                    raise WorkflowErroe(
+                    raise WorkflowError(
                         e,
                         "Error 111 connection timeout, please check"
                         " that the k8 cluster master is reachable!",
