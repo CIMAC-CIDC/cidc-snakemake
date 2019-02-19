@@ -1284,11 +1284,9 @@ class KubernetesExecutor(ClusterExecutor):
 
     def unregister_secret(self):
         import kubernetes.client
-        from unittest.mock import patch
-        with patch("self.kubeapi.delete_namespaced_secret", return_value=True):
-            self.kubeapi.delete_namespaced_secret(
-                self.run_namespace, self.namespace, body=kubernetes.client.V1DeleteOptions()
-            )
+        self.kubeapi.delete_namespaced_secret(
+            self.run_namespace, self.namespace, body=kubernetes.client.V1DeleteOptions()
+        )
 
     def shutdown(self):
         self.unregister_secret()
