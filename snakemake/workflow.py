@@ -694,7 +694,7 @@ class Workflow:
             if not dryrun and not no_hooks:
                 self._onerror(logger.get_logfile())
             logger.logfile_hint()
-            return False
+            return dag
 
     @property
     def current_basedir(self):
