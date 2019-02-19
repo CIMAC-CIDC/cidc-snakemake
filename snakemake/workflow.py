@@ -689,7 +689,7 @@ class Workflow:
                 logger.logfile_hint()
             if not dryrun and not no_hooks:
                 self._onsuccess(logger.get_logfile())
-            return True
+            return dag
         else:
             if not dryrun and not no_hooks:
                 self._onerror(logger.get_logfile())
