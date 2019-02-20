@@ -433,7 +433,7 @@ class Workflow:
             except IOError:
                 logger.error("Error: Unlocking the directory {} failed. Maybe "
                              "you don't have the permissions?")
-                return False
+                return dag
         try:
             self.persistence.lock()
         except IOError:
@@ -446,7 +446,7 @@ class Workflow:
                 "the remaining lock was likely caused by a kill signal or "
                 "a power loss. It can be removed with "
                 "the --unlock argument.".format(os.getcwd()))
-            return False
+            return dag
 
         if cleanup_shadow:
             self.persistence.cleanup_shadow()
@@ -469,7 +469,7 @@ class Workflow:
                                         targets=subworkflow_targets,
                                         configfile=subworkflow.configfile,
                                         updated_files=updated):
-                        return False
+                        return dag
                     dag.updated_subworkflow_files.update(subworkflow.target(f)
                                                          for f in updated)
                 else:
@@ -500,7 +500,7 @@ class Workflow:
                     "that you handle the dependencies yourself or turn of "
                     "--immediate-submit. Missing input files:\n{}".format(
                         "\n".join(missing_input)))
-                return False
+                return dag
 
         updated_files.extend(f for job in dag.needrun_jobs for f in job.output)
 
