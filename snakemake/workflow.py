@@ -674,7 +674,10 @@ class Workflow:
         if not dryrun and not no_hooks:
             self._onstart(logger.get_logfile())
 
-        success = scheduler.schedule()
+        try:
+            success = scheduler.schedule()
+        except (RuleException, WorkflowError) as re:
+            return dag, re
 
         if success:
             if dryrun:
@@ -689,12 +692,12 @@ class Workflow:
                 logger.logfile_hint()
             if not dryrun and not no_hooks:
                 self._onsuccess(logger.get_logfile())
-            return dag
+            return dag, None
         else:
             if not dryrun and not no_hooks:
                 self._onerror(logger.get_logfile())
             logger.logfile_hint()
-            return dag
+            return dag, "Error"
 
     @property
     def current_basedir(self):
