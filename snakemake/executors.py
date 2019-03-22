@@ -431,8 +431,6 @@ class ClusterExecutor(RealExecutor):
         exec_job=None,
         assume_shared_fs=True,
         max_status_checks_per_second=1,
-        kubernetes_resource_requests=None,
-        kubernetes_tolerations=None
     ):
         from ratelimiter import RateLimiter
 
@@ -1281,7 +1279,7 @@ class KubernetesExecutor(ClusterExecutor):
         import kubernetes.client
 
         self.kubeapi.delete_namespaced_secret(
-            self.run_namespace, self.namespace, kubernetes.client.V1DeleteOptions()
+            self.run_namespace, self.namespace, body=kubernetes.client.V1DeleteOptions()
         )
 
     def shutdown(self):
@@ -1389,15 +1387,15 @@ class KubernetesExecutor(ClusterExecutor):
         # maintenance, but won't use a full core for that.
         # This way, we should be able to saturate the node without exceeding it
         # too much.
-        if not self.kubernetes_resource_requests:
+        try:
+            container.resources.requests["cpu"] = self.kubernetes_resource_requests[0]["cpu"]
+            container.resources.requests["memory"] = "{}M".format(self.kubernetes_resource_requests[0]["memory"])
+        except AttributeError:
             container.resources.requests["cpu"] = job.resources["_cores"] - 1
             if "mem_mb" in job.resources.keys():
                 container.resources.requests["memory"] = "{}M".format(
                     job.resources["mem_mb"]
                 )
-        else:
-            container.resources.requests["cpu"] = self.kubernetes_resource_requests[0]["cpu"]
-            container.resources.requests["memory"] = "{}M".format(self.kubernetes_resource_requests[0]["memory"])
 
         # capabilities
         if job.needs_singularity and self.workflow.use_singularity:
