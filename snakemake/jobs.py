@@ -106,6 +106,7 @@ class Job(AbstractJob):
 
         self.shadow_dir = None
         self._inputsize = None
+        self.is_updated = False
 
         self._attempt = self.dag.workflow.attempt
 
@@ -145,9 +146,11 @@ class Job(AbstractJob):
             self._hash ^= wildcard_value.__hash__()
 
     def updated(self):
-        return Job(self.rule, self.dag,
-                   wildcards_dict=self.wildcards_dict,
-                   targetfile=self.targetfile)
+        job = Job(self.rule, self.dag,
+                  wildcards_dict=self.wildcards_dict,
+                  targetfile=self.targetfile)
+        job.is_updated = True
+        return job
 
     def is_valid(self):
         """Check if job is valid"""
@@ -943,7 +946,7 @@ class Job(AbstractJob):
 
 class GroupJob(AbstractJob):
 
-    __slots__ = ["groupid", "jobs", "_resources", "_input", "_output",
+    __slots__ = ["groupid", "jobs", "_resources", "_input", "_output", "_log",
                  "_inputsize", "_all_products", "_attempt"]
 
     def __init__(self, id, jobs):
@@ -952,6 +955,7 @@ class GroupJob(AbstractJob):
         self._resources = None
         self._input = None
         self._output = None
+        self._log = None
         self._inputsize = None
         self._all_products = None
         self._attempt = self.dag.workflow.attempt
@@ -992,8 +996,13 @@ class GroupJob(AbstractJob):
     def is_group(self):
         return True
 
+    @property
     def is_checkpoint(self):
         return any(job.is_checkpoint for job in self.jobs)
+
+    @property
+    def is_updated(self):
+        return any(job.is_updated for job in self.jobs)
 
     def log_info(self, skip_dynamic=False):
         logger.group_info(groupid=self.groupid)
@@ -1067,6 +1076,12 @@ class GroupJob(AbstractJob):
             self._output = [f for job in self.jobs
                               for f in job.output if f not in all_input]
         return self._output
+
+    @property
+    def log(self):
+        if self._log is None:
+            self._log = [f for job in self.jobs for f in job.log]
+        return self._log
 
     @property
     def products(self):

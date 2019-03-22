@@ -1,9 +1,43 @@
-[unreleased]
-============
+[5.4.4] - 2019-03-22
+====================
+
+Changed
+-------
+- Vastly improved performance of HTML reports generated with --report, via a more efficient encoding of dara-uri based download links.
+- Tighter layout, plus thumbnails and a lightbox for graphical results in HTML reports.
+- Bug fix for pipe groups.
+- Updated docs.
+- Better error handling in DRMAA executor.
+
+[5.4.3] - 2019-03-11
+====================
+
+Changed
+-------
+- More robust handling of conda environment activation that should work with all setups where the conda is available when starting snakemake.
+- Fixed bugs on windows.
+
+[5.4.2] - 2019-02-15
+====================
+
+Changed
+-------
+- Fixed a bug where git module cannot be imported from wrapper.
+
+[5.4.1] - 2019-02-14
+====================
 
 Added
 -----
 - Warning when R script is used in combination with conda and R_LIBS environment variable is set. This can cause unexpected results and should be avoided.
+
+Changed
+-------
+- Improved quoting of paths in conda commands.
+- Fixed various issues with checkpoints.
+- Improved error messages when combining groups with cluster config.
+- Fixed bugs in group implementation.
+- Fixed singularity in combination with shadow. 
 
 [5.4.0] - 2018-12-18
 ====================

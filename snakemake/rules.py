@@ -8,7 +8,7 @@ import re
 import sys
 import inspect
 import sre_constants
-from collections import defaultdict, Iterable
+import collections
 from urllib.parse import urljoin
 from pathlib import Path
 from itertools import chain
@@ -134,7 +134,7 @@ class Rule:
         branch = Rule(self)
         io_, dynamic_io_ = get_io(branch)
 
-        expansion = defaultdict(list)
+        expansion = collections.defaultdict(list)
         for i, f in enumerate(io):
             if f in dynamic_io:
                 f = partially_expand(f, wildcards)
@@ -342,7 +342,7 @@ class Rule:
         assert not callable(item)
         if isinstance(item, dict):
             return {k: apply(v) for k, v in item.items()}
-        elif isinstance(item, Iterable) and not isinstance(item, str):
+        elif isinstance(item, collections.Iterable) and not isinstance(item, str):
             return [apply(e) for e in item]
         else:
             return apply(item)
@@ -540,6 +540,8 @@ class Rule:
                              **aux_params):
         if isinstance(func, _IOFile):
             func = func._file.callable
+        elif isinstance(func, AnnotatedString):
+            func = func.callable
         sig = inspect.signature(func)
         _aux_params = {k: v for k, v in aux_params.items() if k in sig.parameters}
         try:
@@ -558,7 +560,8 @@ class Rule:
                          no_flattening=False,
                          aux_params=None,
                          apply_default_remote=True,
-                         incomplete_checkpoint_func=lambda e: None):
+                         incomplete_checkpoint_func=lambda e: None,
+                         allow_unpack=True):
         if aux_params is None:
             aux_params = dict()
         for name, item in olditems.allitems():
@@ -578,6 +581,11 @@ class Rule:
                     item = self.apply_default_remote(item)
 
             if is_unpack:
+                if not allow_unpack:
+                    raise WorkflowError(
+                        "unpack() is not allowed with params. "
+                        "Simply return a dictionary which can be directly ."
+                        "used, e.g. via {params[mykey]}.")
                 # Sanity checks before interpreting unpack()
                 if not isinstance(item, (list, dict)):
                     raise WorkflowError(
@@ -672,6 +680,7 @@ class Rule:
                                   concretize=concretize_param,
                                   check_return_type=False,
                                   omit_callable=omit_callable,
+                                  allow_unpack=False,
                                   no_flattening=True,
                                   apply_default_remote=False,
                                   aux_params={"input": input.plainstrings(),

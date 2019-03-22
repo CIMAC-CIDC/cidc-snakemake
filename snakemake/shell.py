@@ -13,7 +13,8 @@ import threading
 
 from snakemake.utils import format
 from snakemake.logging import logger
-from snakemake import singularity, conda
+from snakemake import singularity
+from snakemake.conda import Conda
 import snakemake
 
 
@@ -95,20 +96,25 @@ class shell:
         env_prefix = ""
         conda_env = context.get("conda_env", None)
         singularity_img = context.get("singularity_img", None)
-        if conda_env:
-            env_prefix = conda.shellcmd(conda_env)
+        shadow_dir = context.get("shadow_dir", None)
 
-        cmd = "{} {} {} {}".format(
-                            env_prefix,
+        cmd = "{} {} {}".format(
                             cls._process_prefix,
                             cmd.strip(),
                             cls._process_suffix).strip()
 
+        conda = None
+        if conda_env:
+            cmd = Conda(singularity_img).shellcmd(conda_env, cmd)
+
         if singularity_img:
             args = context.get("singularity_args", "")
-            cmd = singularity.shellcmd(singularity_img, cmd, args)
-            logger.info("Activating singularity image {}".format(singularity_img))
-
+            cmd = singularity.shellcmd(
+                singularity_img, cmd, args,
+                shell_executable=cls._process_args["executable"],
+                container_workdir=shadow_dir)
+            logger.info(
+                "Activating singularity image {}".format(singularity_img))
         if conda_env:
             logger.info("Activating conda environment: {}".format(conda_env))
 
@@ -116,6 +122,7 @@ class shell:
                         bufsize=-1,
                         shell=True,
                         stdout=stdout,
+                        universal_newlines=iterable or None,
                         close_fds=close_fds, **cls._process_args)
 
         if jobid is not None:
@@ -145,7 +152,7 @@ class shell:
     @staticmethod
     def iter_stdout(proc, cmd):
         for l in proc.stdout:
-            yield l[:-1].decode()
+            yield l[:-1]
         retcode = proc.wait()
         if retcode:
             raise sp.CalledProcessError(retcode, cmd)

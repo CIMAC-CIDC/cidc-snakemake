@@ -4,7 +4,6 @@ __email__ = "koester@jimmy.harvard.edu"
 __license__ = "MIT"
 
 import collections
-import git
 import os
 import shutil
 from pathlib import Path
@@ -17,7 +16,7 @@ import copy
 import functools
 import subprocess as sp
 from itertools import product, chain
-from collections import Iterable, namedtuple
+import collections
 from snakemake.exceptions import MissingOutputException, WorkflowError, WildcardError, RemoteFileException
 from snakemake.logging import logger
 from inspect import isfunction, ismethod
@@ -500,7 +499,7 @@ _wildcard_regex = re.compile(
     """, re.VERBOSE)
 
 
-def wait_for_files(files, latency_wait=3, force_stay_on_remote=False):
+def wait_for_files(files, latency_wait=3, force_stay_on_remote=False, ignore_pipe=False):
     """Wait for given files to be present in filesystem."""
     files = list(files)
     def get_missing():
@@ -510,7 +509,7 @@ def wait_for_files(files, latency_wait=3, force_stay_on_remote=False):
                     if (isinstance(f, _IOFile) and
                        f.is_remote and
                        (force_stay_on_remote or f.should_stay_on_remote))
-                    else os.path.exists(f))]
+                    else os.path.exists(f) if not (is_flagged(f, "pipe") and ignore_pipe) else True)]
 
     missing = get_missing()
     if missing:
@@ -612,12 +611,13 @@ def apply_wildcards(pattern,
 
 def not_iterable(value):
     return isinstance(value, str) or isinstance(value, dict) or not isinstance(
-        value, Iterable)
+        value, collections.Iterable)
 
 
 def is_callable(value):
     return (callable(value) or
-            (isinstance(value, _IOFile) and value._is_function))
+            (isinstance(value, _IOFile) and value._is_function) or
+            (isinstance(value, AnnotatedString) and value.callable is not None))
 
 
 class AnnotatedString(str):
@@ -743,7 +743,7 @@ def checkpoint_target(value):
     return flag(value, "checkpoint_target")
 
 
-ReportObject = namedtuple("ReportObject", ["caption", "category"])
+ReportObject = collections.namedtuple("ReportObject", ["caption", "category"])
 
 
 def report(value, caption=None, category=None):
@@ -781,7 +781,7 @@ def expand(*args, **wildcards):
 
     def flatten(wildcards):
         for wildcard, values in wildcards.items():
-            if isinstance(values, str) or not isinstance(values, Iterable):
+            if isinstance(values, str) or not isinstance(values, collections.Iterable):
                 values = [values]
             yield [(wildcard, value) for value in values]
 
@@ -821,7 +821,7 @@ def glob_wildcards(pattern, files=None):
 
     names = [match.group('name')
              for match in _wildcard_regex.finditer(pattern)]
-    Wildcards = namedtuple("Wildcards", names)
+    Wildcards = collections.namedtuple("Wildcards", names)
     wildcards = Wildcards(*[list() for name in names])
 
     pattern = re.compile(regex(pattern))
@@ -891,6 +891,7 @@ def get_git_root(path):
         Returns:
             path to root folder for git repo
     """
+    import git
     try:
         git_repo = git.Repo(path, search_parent_directories=True)
         return git_repo.git.rev_parse("--show-toplevel")
@@ -911,6 +912,7 @@ def get_git_root_parent_directory(path, input_path):
         Returns:
             path to root folder for git repo
     """
+    import git
     try:
         git_repo = git.Repo(path, search_parent_directories=True)
         return git_repo.git.rev_parse("--show-toplevel")
@@ -934,6 +936,7 @@ def git_content(git_file):
         Returns:
             file content or None if the expected format isn't meet
     """
+    import git
     if git_file.startswith("git+file:"):
         (root_path, file_path, version) = split_git_path(git_file)
         return git.Repo(root_path).git.show('{}:{}'.format(version, file_path))

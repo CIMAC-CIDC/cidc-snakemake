@@ -170,9 +170,6 @@ class Env:
         """ Create the conda enviroment."""
         from snakemake.shell import shell
 
-        if self._singularity_img:
-            check_conda(self._singularity_img)
-
         # Read env file and create hash.
         env_file = self.file
         tmp_file = None
@@ -198,6 +195,7 @@ class Env:
 
         # Create environment if not already present.
         if not os.path.exists(env_path):
+            conda = Conda(self._singularity_img)
             if dryrun:
                 logger.info("Conda environment {} will be created.".format(utils.simplify_path(self.file)))
                 return env_path
@@ -277,52 +275,84 @@ class Env:
         return False
 
 
-def shellcmd(env_path):
-    return "source activate '{}';".format(env_path)
+class Conda:
+    instances = dict()
 
+    def __new__(cls, singularity_img=None):
+        if singularity_img not in cls.instances:
+            inst = super().__new__(cls)
+            inst.__init__(singularity_img=singularity_img)
+            cls.instances[singularity_img] = inst
+            return inst
+        else:
+            return cls.instances[singularity_img]
 
-def check_conda(singularity_img=None):
-    from snakemake.shell import shell
+    def __init__(self, singularity_img=None):
+        from snakemake.shell import shell
+        from snakemake import singularity
+        if isinstance(singularity_img, singularity.Image):
+            singularity_img = singularity_img.path
+        self.singularity_img = singularity_img
+        self._check()
+        self.info = json.loads(shell.check_output(self._get_cmd("conda info --json")))
 
-    def get_cmd(cmd):
-        if singularity_img:
-            return singularity.shellcmd(singularity_img.path, cmd)
+    def _get_cmd(self, cmd):
+        if self.singularity_img:
+            return singularity.shellcmd(self.singularity_img, cmd)
         return cmd
 
-    try:
-        # Use type here since conda now is a function.
-        # type allows to check for both functions and regular commands.
-        shell.check_output(get_cmd("type conda"), stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError:
-        if singularity_img:
-            raise CreateCondaEnvironmentException("The 'conda' command is not "
-                                                  "available inside "
-                                                  "your singularity container "
-                                                  "image. Make sure that "
-                                                  "conda is properly installed "
-                                                  "inside your container "
-                                                  "image. For example use "
-                                                  "continuumio/miniconda3 as a "
-                                                  "base image.")
-        else:
-            raise CreateCondaEnvironmentException("The 'conda' command is not "
-                                                  "available in the "
-                                                  "shell {} that will be "
-                                                  "used by Snakemake. You have "
-                                                  "to ensure that it is in your "
-                                                  "PATH, e.g., first activating "
-                                                  "the conda base environment "
-                                                  "with `conda activate base`.".format(
-                                                    shell.get_executable()))
-    try:
-        version = shell.check_output(get_cmd("conda --version"),
-                                          stderr=subprocess.STDOUT).decode() \
-                                                                   .split()[1]
-        if StrictVersion(version) < StrictVersion("4.2"):
+    def _check(self):
+        from snakemake.shell import shell
+
+        try:
+            # Use type here since conda now is a function.
+            # type allows to check for both functions and regular commands.
+            shell.check_output(self._get_cmd("type conda"), stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError:
+            if self.singularity_img:
+                raise CreateCondaEnvironmentException("The 'conda' command is not "
+                                                      "available inside "
+                                                      "your singularity container "
+                                                      "image. Snakemake mounts "
+                                                      "your conda installation "
+                                                      "into singularity. "
+                                                      "Sometimes, this can fail "
+                                                      "because of shell restrictions. "
+                                                      "It has been tested to work "
+                                                      "with docker://ubuntu, but "
+                                                      "it e.g. fails with "
+                                                      "docker://bash ")
+            else:
+                raise CreateCondaEnvironmentException("The 'conda' command is not "
+                                                      "available in the "
+                                                      "shell {} that will be "
+                                                      "used by Snakemake. You have "
+                                                      "to ensure that it is in your "
+                                                      "PATH, e.g., first activating "
+                                                      "the conda base environment "
+                                                      "with `conda activate base`.".format(
+                                                        shell.get_executable()))
+        try:
+            version = shell.check_output(self._get_cmd("conda --version"),
+                                              stderr=subprocess.STDOUT).decode() \
+                                                                       .split()[1]
+            if StrictVersion(version) < StrictVersion("4.2"):
+                raise CreateCondaEnvironmentException(
+                    "Conda must be version 4.2 or later."
+                )
+        except subprocess.CalledProcessError as e:
             raise CreateCondaEnvironmentException(
-                "Conda must be version 4.2 or later."
+                "Unable to check conda version:\n" + e.output.decode()
             )
-    except subprocess.CalledProcessError as e:
-        raise CreateCondaEnvironmentException(
-            "Unable to check conda version:\n" + e.output.decode()
-        )
+
+    def prefix_path(self):
+        return self.info["conda_prefix"]
+
+    def bin_path(self):
+        return os.path.join(self.prefix_path(), "bin")
+
+    def shellcmd(self, env_path, cmd):
+        from snakemake.shell import shell
+        # get path to activate script
+        activate = os.path.join(self.bin_path(), "activate")
+        return "source {} '{}'; {}".format(activate, env_path, cmd)

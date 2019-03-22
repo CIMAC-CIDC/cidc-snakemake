@@ -152,7 +152,7 @@ class Workflow:
                 if f:
                     files.add(os.path.relpath(f))
         except subprocess.CalledProcessError as e:
-            if "fatal: Not a git repository" in e.stderr.decode():
+            if "fatal: not a git repository" in e.stderr.decode().lower():
                 logger.warning("Unable to retrieve additional files from git. "
                                "This is not a git repository.")
             else:
@@ -419,6 +419,7 @@ class Workflow:
 
         logger.info("Building DAG of jobs...")
         dag.init()
+        dag.update_checkpoint_dependencies()
         # check incomplete has to run BEFORE any call to postprocess
         dag.check_incomplete()
         dag.check_dynamic()
@@ -770,11 +771,11 @@ class Workflow:
             self._workdir = workdir
             os.chdir(workdir)
 
-    def configfile(self, jsonpath):
-        """ Update the global config with the given dictionary. """
+    def configfile(self, fp):
+        """ Update the global config with data from the given file. """
         global config
-        self.configfiles.append(jsonpath)
-        c = snakemake.io.load_configfile(jsonpath)
+        self.configfiles.append(fp)
+        c = snakemake.io.load_configfile(fp)
         update_config(config, c)
         update_config(config, self.overwrite_config)
 

@@ -157,9 +157,6 @@ class DAG:
             if job.is_checkpoint:
                 yield job
 
-    def is_checkpoint_output(self, f):
-        return f in self._checkpoint_outputs
-
     def update_checkpoint_outputs(self):
         workflow.checkpoints.future_output = set(f for job in self.checkpoint_jobs
                                                    for f in job.output)
@@ -185,7 +182,8 @@ class DAG:
                           forceall=False,
                           init_only=False,
                           quiet=False):
-        conda.check_conda()
+        # see if conda works at all
+        conda.Conda()
         # First deduplicate based on job.conda_env_file
         jobs = self.jobs if forceall else self.needrun_jobs
         env_set = {(job.conda_env_file, job.singularity_img_url)
@@ -381,7 +379,8 @@ class DAG:
             try:
                 wait_for_files(expanded_output,
                                latency_wait=wait,
-                               force_stay_on_remote=force_stay_on_remote)
+                               force_stay_on_remote=force_stay_on_remote,
+                               ignore_pipe=True)
             except IOError as e:
                 raise MissingOutputException(str(e) + "\nThis might be due to "
                 "filesystem latency. If that is the case, consider to increase the "
@@ -570,7 +569,10 @@ class DAG:
 
     def jobid(self, job):
         """Return job id of given job."""
-        return self._jobid[job]
+        if job.is_group():
+            return job.jobid
+        else:
+            return self._jobid[job]
 
     def update(self, jobs, file=None, visited=None, skip_until_dynamic=False, progress=False):
         """ Update the DAG by adding given jobs and their dependencies. """
@@ -816,11 +818,13 @@ class DAG:
             if job.group is None:
                 continue
             stop = lambda j: j.group != job.group
-            # BFS into depending jobs if in same group
+            # BFS into depending needrun jobs if in same group
             # Note: never go up here (into depending), because it may contain
             # jobs that have been sorted out due to e.g. ruleorder.
             group = GroupJob(job.group,
-                             self.bfs(self.dependencies, job, stop=stop))
+                             (job for job in
+                              self.bfs(self.dependencies, job, stop=stop)
+                              if self.needrun(job)))
 
             # merge with previously determined groups if present
             for j in group:
@@ -964,6 +968,25 @@ class DAG:
         return self._finished.issuperset(filter(is_external_needrun_dep,
                                                 self.dependencies[job]))
 
+    def update_checkpoint_dependencies(self, jobs=None):
+        """Update dependencies of checkpoints."""
+        updated = False
+        self.update_checkpoint_outputs()
+        if jobs is None:
+            jobs = [job for job in self.jobs if not self.needrun(job)]
+        for job in jobs:
+            if job.is_checkpoint:
+                depending = list(self.depending[job])
+                # re-evaluate depending jobs, replace and update DAG
+                for j in depending:
+                    logger.info("Updating job {}.".format(self.jobid(j)))
+                    newjob = j.updated()
+                    self.replace_job(j, newjob, recursive=False)
+                    updated = True
+                if updated:
+                    self.postprocess()
+        return updated
+
     def finish(self, job, update_dynamic=True):
         """Finish a given job (e.g. remove from ready jobs, mark depending jobs
         as ready)."""
@@ -979,17 +1002,9 @@ class DAG:
 
         self._finished.update(jobs)
 
+        updated_dag = False
         if update_dynamic:
-            self.update_checkpoint_outputs()
-            for job in jobs:
-                if job.is_checkpoint:
-                    depending = list(self.depending[job])
-                    # re-evaluate depending jobs, replace and update DAG
-                    for j in depending:
-                        logger.info("Updating job {}.".format(self.jobid(j)))
-                        newjob = j.updated()
-                        self.replace_job(j, newjob, recursive=False)
-                    self.postprocess()
+            updated_dag = self.update_checkpoint_dependencies(jobs)
 
         # mark depending jobs as ready
         # skip jobs that are marked as until jobs
@@ -1005,10 +1020,20 @@ class DAG:
                     self.omitforce.add(newjob)
                     self._needrun.add(newjob)
                     self._finished.add(newjob)
+                    updated_dag = True
 
                     self.postprocess()
                     self.handle_protected(newjob)
                     self.handle_touch(newjob)
+
+        if updated_dag:
+            # We might have new jobs, so we need to ensure that all conda envs
+            # and singularity images are set up.
+            if self.workflow.use_singularity:
+                self.pull_singularity_imgs()
+            if self.workflow.use_conda:
+                self.create_conda_envs()
+
 
     def new_job(self, rule, targetfile=None, format_wildcards=None):
         """Create new job for given rule and (optional) targetfile.
@@ -1454,21 +1479,20 @@ class DAG:
     def clean(self, only_temp=False, dryrun=False):
         """Removes files generated by the workflow.
         """
-        if dryrun:
-            logger.info("Would delete the following files:")
-        else:
-            logger.info("Deleting the following files:")
-
         for job in self.jobs:
             for f in job.output:
                 if not only_temp or is_flagged(f, "temp"):
                     # The reason for the second check is that dangling
                     # symlinks fail f.exists.
                     if f.exists or os.path.islink(f):
-                        logger.info(f)
-                        if not dryrun:
-                            # Remove non-empty dirs if flagged as temp()
-                            f.remove(remove_non_empty_dir=only_temp)
+                        if f.protected:
+                            logger.error("Skipping write-protected file {}.".format(f))
+                        else:
+                            msg = "Deleting {}" if not dryrun else "Would delete {}"
+                            logger.info(msg.format(f))
+                            if not dryrun:
+                                # Remove non-empty dirs if flagged as temp()
+                                f.remove(remove_non_empty_dir=only_temp)
 
     def list_untracked(self):
         """List files in the workdir that are not in the dag.
