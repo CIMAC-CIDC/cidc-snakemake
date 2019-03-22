@@ -8,7 +8,7 @@ dependencies:
   - moto >=1.0.1
   - httpretty
   - wrapt
-  - pyyaml
+  - pyyaml >=5.1
   - ftputil
   - pysftp
   - requests

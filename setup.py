@@ -44,7 +44,7 @@ setup(
          "snakemake-bash-completion = snakemake:bash_completion"]
     },
     package_data={'': ['*.css', '*.sh', '*.html']},
-    install_requires=['wrapt', 'requests', 'ratelimiter', 'pyyaml',
+    install_requires=['wrapt', 'requests', 'ratelimiter', 'pyyaml==5.1',
                       'configargparse', 'appdirs', 'datrie', 'jsonschema',
                       'docutils', 'gitpython'],
     extras_require={"reports": ['jinja2', 'networkx']},
