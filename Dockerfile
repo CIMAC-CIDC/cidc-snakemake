@@ -1,5 +1,5 @@
 FROM bitnami/minideb:stretch
-MAINTAINER Johannes Köster <johannes.koester@tu-dortmund.de>
+LABEL AUTHOR="Johannes Köster <johannes.koester@tu-dortmund.de>"
 ENV SINGULARITY_VERSION=2.4.5
 ADD . /tmp/repo
 WORKDIR /tmp/repo

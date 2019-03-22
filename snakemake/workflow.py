@@ -434,7 +434,7 @@ class Workflow:
             except IOError:
                 logger.error("Error: Unlocking the directory {} failed. Maybe "
                              "you don't have the permissions?")
-                return False
+                return dag
         try:
             self.persistence.lock()
         except IOError:
@@ -447,11 +447,11 @@ class Workflow:
                 "the remaining lock was likely caused by a kill signal or "
                 "a power loss. It can be removed with "
                 "the --unlock argument.".format(os.getcwd()))
-            return False
+            return dag
 
         if cleanup_shadow:
             self.persistence.cleanup_shadow()
-            return True
+            return dag
 
         if self.subworkflows and not printdag and not printrulegraph:
             # backup globals
@@ -501,7 +501,7 @@ class Workflow:
                     "that you handle the dependencies yourself or turn of "
                     "--immediate-submit. Missing input files:\n{}".format(
                         "\n".join(missing_input)))
-                return False
+                return dag
 
         updated_files.extend(f for job in dag.needrun_jobs for f in job.output)
 
@@ -690,12 +690,12 @@ class Workflow:
                 logger.logfile_hint()
             if not dryrun and not no_hooks:
                 self._onsuccess(logger.get_logfile())
-            return True
+            return dag, None
         else:
             if not dryrun and not no_hooks:
                 self._onerror(logger.get_logfile())
             logger.logfile_hint()
-            return False
+            return dag, "Error"
 
     @property
     def current_basedir(self):
