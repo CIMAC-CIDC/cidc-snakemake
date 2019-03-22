@@ -316,7 +316,9 @@ class Workflow:
                 assume_shared_fs=True,
                 cluster_status=None,
                 report=None,
-                export_cwl=False):
+                export_cwl=False,
+                kubernetes_resource_requests=None,
+                kubernetes_tolerations=None):
 
         self.check_localrules()
 
@@ -615,7 +617,9 @@ class Workflow:
                                  latency_wait=latency_wait,
                                  greediness=greediness,
                                  force_use_threads=force_use_threads,
-                                 assume_shared_fs=assume_shared_fs)
+                                 assume_shared_fs=assume_shared_fs,
+                                 kubernetes_resource_requests=kubernetes_resource_requests,
+                                 kubernetes_tolerations=kubernetes_tolerations)
 
         if not dryrun:
             if len(dag):

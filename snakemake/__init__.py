@@ -3,6 +3,9 @@ __copyright__ = "Copyright 2015, Johannes Köster"
 __email__ = "koester@jimmy.harvard.edu"
 __license__ = "MIT"
 
+
+
+
 import os
 import subprocess
 import glob
@@ -124,7 +127,9 @@ def snakemake(snakefile,
               default_remote_prefix="",
               assume_shared_fs=True,
               cluster_status=None,
-              export_cwl=None):
+              export_cwl=None,
+              kubernetes_resource_requests=None,
+              kubernetes_tolerations=None):
     """Run snakemake on a given snakefile.
 
     This function provides access to the whole snakemake functionality. It is not thread-safe.
@@ -222,7 +227,8 @@ def snakemake(snakefile,
         cluster_status (str):       status command for cluster execution. If None, Snakemake will rely on flag files. Otherwise, it expects the command to return "success", "failure" or "running" when executing with a cluster jobid as single argument.
         export_cwl (str):           Compile workflow to CWL and save to given file
         log_handler (function):     redirect snakemake output to this custom log handler, a function that takes a log message dictionary (see below) as its only argument (default None). The log message dictionary for the log handler has to following entries:
-
+        kubernetes_resource_requests (dict): Dictionary specifying resource requests for the kubernetes runs.
+        kubernetes_tolerations (dict): Defines toleration to be applied to the kubernetes job.
             :level:
                 the log level ("info", "error", "debug", "progress", "job_info")
 
@@ -541,7 +547,9 @@ def snakemake(snakefile,
                     assume_shared_fs=assume_shared_fs,
                     cluster_status=cluster_status,
                     report=report,
-                    export_cwl=export_cwl)
+                    export_cwl=export_cwl,
+                    kubernetes_resource_requests=kubernetes_resource_requests,
+                    kubernetes_tolerations=kubernetes_tolerations)
 
     except BrokenPipeError:
         # ignore this exception and stop. It occurs if snakemake output is piped into less and less quits before reading the whole output.
@@ -1559,7 +1567,9 @@ def main(argv=None):
                             default_remote_prefix=args.default_remote_prefix,
                             assume_shared_fs=not args.no_shared_fs,
                             cluster_status=args.cluster_status,
-                            export_cwl=args.export_cwl)
+                            export_cwl=args.export_cwl,
+                            kubernetes_resource_requests=args.kubernetes_resource_requests,
+                            kubernetes_tolerations=args.kubernetes_tolerations)
 
     if args.runtime_profile:
         with open(args.runtime_profile, "w") as out:
