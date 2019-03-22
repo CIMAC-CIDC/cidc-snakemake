@@ -5,7 +5,7 @@ dependencies:
   - python >=3.5
   - datrie
   - wrapt
-  - pyyaml
+  - pyyaml >=5.1
   - requests
   - appdirs
   - docutils
